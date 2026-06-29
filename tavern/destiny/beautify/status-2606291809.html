@@ -12787,7 +12787,7 @@
       E = z
         .object({
           ...j.shape,
-          性别: z.string().prefault("男"),
+          性别: z.string().prefault(""),
               累计经验值: z.coerce.number().prefault(0),
           升级所需经验: z.union([
             z.coerce.number().prefault(120),
@@ -12807,7 +12807,7 @@
             .transform((e) => _.pickBy(e, (e) => e.数量 > 0)),
           金钱: z.coerce.number().prefault(0).transform(Math.round),
           状态效果: z.record(z.string(), S).prefault({}),
-            主角堕落: z.object({
+            堕落档案: z.object({
               堕落度: g(0, 0, 100),
               堕落节点: z.record(z.string(), z.object({
                 阈值: z.coerce.number().prefault(0),
@@ -12857,7 +12857,7 @@
             "体力值上限",
             "体力值",
             "状态效果",
-            "主角堕落",
+            "堕落档案",
             "金钱",
             "背包",
             "装备",
@@ -21283,14 +21283,14 @@
                     "[StatusBar] 迁移：已初始化堕落度/xp/特殊项目字段",
                   );
               }
-              // 主角堕落状态迁移
+              // 堕落档案状态迁移
               try {
                 const t = _.get(j, "stat_data.主角");
                 if (t && _.isObject(t)) {
                   let u = !1;
                   if (void 0 === t.性别) { t.性别 = "男"; u = !0; }
-                  if (t.性别 !== "男" && void 0 === t.主角堕落) {
-                    t.主角堕落 = { 堕落度: 0, 堕落节点: {}, 当前认知: "", 堕落六维: { 道德底线: 0, 共情联结: 0, 欲望顺服: 0, 自我消解: 0, 手段冷厉: 0, 自我正当性: 0 }, xp: {}, 特殊项目: {} };
+                  if (t.性别 !== "男" && void 0 === t.堕落档案) {
+                    t.堕落档案 = { 堕落度: 0, 堕落节点: {}, 当前认知: "", 堕落六维: { 道德底线: 0, 共情联结: 0, 欲望顺服: 0, 自我消解: 0, 手段冷厉: 0, 自我正当性: 0 }, xp: {}, 特殊项目: {} };
                     u = !0;
                   }
                   if (u) {
@@ -21302,7 +21302,7 @@
                   }
                 }
               } catch (w) {
-                console.warn("[StatusBar] 迁移主角堕落字段失败:", w);
+                console.warn("[StatusBar] 迁移堕落档案字段失败:", w);
               }
             } catch (z) {
               console.warn("[StatusBar] 迁移初始化字段失败:", z);
@@ -21344,7 +21344,7 @@
                   case "news":
                     return (0, i.jsx)(Ao, {});
                   case "depravity":
-                    return (0, i.jsxs)("div", { className: "depravity-tab", children: [(0, i.jsx)("div", { className: "section-title", children: "堕落档案" }), (0, i.jsx)("div", { className: "placeholder", children: "主角性别为" + (_.get(e, "主角.性别", "男") || "男") + "。" + (_.get(e, "主角.性别", "男") !== "男" ? "堕落状态已激活，详见主角堕落数据。" : "仅非男性主角可使用堕落系统。") }) ] });
+                    return (0, i.jsxs)("div", { className: "depravity-tab", children: [(0, i.jsx)("div", { className: "section-title", children: "堕落档案" }), (0, i.jsx)("div", { className: "placeholder", children: "主角性别为" + (_.get(e, "主角.性别", "男") || "男") + "。" + (_.get(e, "主角.性别", "男") !== "男" ? "堕落状态已激活，详见堕落档案数据。" : "仅非男性主角可使用堕落系统。") }) ] });
                   case "map":
                     return (0, i.jsx)(Bo, {});
                   default:
