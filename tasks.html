@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>命运任务板 · Destiny Quest Board</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: #06060f;
+    background-image:
+      radial-gradient(ellipse at 20% 15%, rgba(180,130,60,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 85%, rgba(120,80,180,0.05) 0%, transparent 60%),
+      radial-gradient(1px 1px at 15% 25%, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1px 1px at 55% 12%, rgba(255,255,255,0.3), transparent),
+      radial-gradient(1px 1px at 75% 45%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,0.35), transparent),
+      radial-gradient(1px 1px at 90% 20%, rgba(255,255,255,0.25), transparent),
+      radial-gradient(1px 1px at 10% 85%, rgba(255,255,255,0.45), transparent);
+    font-family: "Noto Serif SC", "Source Han Serif SC", "SimSun", "STSong", Georgia, serif;
+    color: #d8d0c0;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 40px 20px 60px;
+  }
+
+  .page-header { text-align: center; margin-bottom: 48px; }
+  .page-header h1 {
+    font-size: 2.2rem; font-weight: 700; letter-spacing: 0.15em;
+    background: linear-gradient(180deg, #f0d680 0%, #b8860b 50%, #8b6508 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 6px;
+  }
+  .page-header .subtitle { font-size: 0.85rem; color: #6b5e4a; letter-spacing: 0.3em; }
+
+  /* 隐藏原始 <task_info> 标签，防止 JS 执行前闪现 */
+  task_info { display: none; }
+
+  .cards-container {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+    gap: 36px; width: 100%; max-width: 1200px; justify-items: center;
+  }
+
+  /* ===== Card ===== */
+  .task-card {
+    width: 100%; max-width: 560px;
+    background: linear-gradient(175deg, #1a1a36 0%, #111128 40%, #0d0d22 100%);
+    border: 1px solid #3a3050; border-radius: 6px; overflow: hidden;
+    box-shadow: 0 0 30px rgba(180,130,50,0.08), 0 8px 32px rgba(0,0,0,0.5);
+    transition: transform 0.3s, box-shadow 0.3s;
+    animation: cardIn 0.6s ease backwards;
+  }
+  .task-card:hover { transform: translateY(-4px); box-shadow: 0 0 50px rgba(180,130,50,0.14), 0 12px 40px rgba(0,0,0,0.55); }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+  .task-card:nth-child(1) { animation-delay: 0.00s; }
+  .task-card:nth-child(2) { animation-delay: 0.12s; }
+  .task-card:nth-child(3) { animation-delay: 0.24s; }
+  .task-card:nth-child(4) { animation-delay: 0.36s; }
+  .task-card:nth-child(5) { animation-delay: 0.48s; }
+
+  .card-ornament {
+    height: 3px;
+    background: linear-gradient(90deg, transparent 0%, rgba(180,130,50,0.2) 15%, #c9a959 30%, #f0d680 50%, #c9a959 70%, rgba(180,130,50,0.2) 85%, transparent 100%);
+  }
+
+  .card-header { display: flex; align-items: center; gap: 14px; padding: 20px 24px 0; }
+  .rank-badge {
+    flex-shrink: 0; width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; font-weight: 900; border-radius: 3px;
+    background: linear-gradient(135deg, #666, #333); color: #fff;
+    box-shadow: 0 0 12px rgba(150,150,150,0.2);
+  }
+  .rank-badge[data-rank="S"] { background: linear-gradient(135deg, #ffd700, #b8860b); color: #1a1a00; box-shadow: 0 0 18px rgba(255,215,0,0.35); }
+  .rank-badge[data-rank="A"] { background: linear-gradient(135deg, #ff5555, #b02020); color: #fff; box-shadow: 0 0 18px rgba(255,80,80,0.3); }
+  .rank-badge[data-rank="B"] { background: linear-gradient(135deg, #5599ff, #2050c0); color: #fff; box-shadow: 0 0 18px rgba(80,140,255,0.3); }
+  .rank-badge[data-rank="C"] { background: linear-gradient(135deg, #55cc66, #208830); color: #fff; box-shadow: 0 0 18px rgba(80,200,100,0.25); }
+  .rank-badge[data-rank="D"] { background: linear-gradient(135deg, #999, #555); color: #fff; box-shadow: 0 0 12px rgba(150,150,150,0.2); }
+
+  .task-title-group { flex: 1; min-width: 0; }
+  .task-name { font-size: 1.25rem; font-weight: 700; color: #f0e0b8; letter-spacing: 0.06em; line-height: 1.3; }
+  .task-type-tag {
+    display: inline-block; font-size: 0.72rem; padding: 2px 10px; border-radius: 2px;
+    margin-top: 4px; letter-spacing: 0.08em;
+    background: rgba(180,130,50,0.18); color: #d4a854; border: 1px solid rgba(180,130,50,0.3);
+  }
+  .task-type-tag[data-type="团队"] { background: rgba(180,130,50,0.18); color: #d4a854; border: 1px solid rgba(180,130,50,0.3); }
+  .task-type-tag[data-type="个人"] { background: rgba(140,120,180,0.18); color: #b8a0d8; border: 1px solid rgba(140,120,180,0.3); }
+
+  .card-body { padding: 18px 24px 20px; }
+  .info-grid { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; align-items: baseline; margin-bottom: 6px; }
+  .info-label { font-size: 0.78rem; color: #7a6e58; letter-spacing: 0.1em; white-space: nowrap; font-weight: 600; }
+  .info-value { font-size: 0.9rem; color: #c8bfa8; line-height: 1.5; }
+  .info-value.cost { color: #e8c060; font-weight: 600; }
+  .info-value.deadline { color: #e06060; font-weight: 600; }
+  .commissioner-mark {
+    display: inline-block; width: 20px; height: 20px; border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    color: #fff; text-align: center; line-height: 20px; font-size: 0.6rem;
+    margin-right: 6px; vertical-align: middle;
+  }
+
+  .detail-block {
+    margin: 10px 0 6px; padding: 12px 16px;
+    background: rgba(255,255,255,0.015); border-left: 2px solid rgba(180,130,50,0.25);
+    border-radius: 0 4px 4px 0; font-size: 0.85rem; color: #b0a590; line-height: 1.65;
+  }
+
+  .reward-section {
+    margin: 14px 0 6px; padding: 16px 18px;
+    background: linear-gradient(135deg, rgba(180,130,50,0.04), rgba(180,130,50,0.01));
+    border: 1px solid rgba(180,130,50,0.18); border-radius: 4px;
+  }
+  .reward-section .section-title {
+    font-size: 0.78rem; color: #b8860b; letter-spacing: 0.1em; font-weight: 700;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .reward-section .section-title::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, rgba(180,130,50,0.3), transparent);
+  }
+  .reward-content { font-size: 0.88rem; color: #d8c888; line-height: 1.6; }
+  .reward-split {
+    display: flex; gap: 20px; margin-top: 10px; padding-top: 10px;
+    border-top: 1px dashed rgba(180,130,50,0.2); font-size: 0.82rem;
+  }
+  .reward-split-item { display: flex; flex-direction: column; gap: 2px; }
+  .reward-split-item .split-label { color: #7a6e58; font-size: 0.72rem; }
+  .reward-split-item .split-value { color: #e8d090; font-weight: 600; }
+
+  .claim-block {
+    margin-top: 10px; padding: 10px 16px;
+    background: rgba(120,180,220,0.04); border: 1px solid rgba(120,180,220,0.15);
+    border-radius: 4px; display: flex; align-items: center; gap: 10px; font-size: 0.84rem;
+  }
+  .claim-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .claim-text { color: #a0c8e8; line-height: 1.5; }
+
+  /* ===== Extra / Redundant Fields ===== */
+  .extra-fields {
+    margin-top: 12px; padding: 10px 16px;
+    background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.06);
+    border-radius: 4px;
+  }
+  .extra-fields .extra-title { font-size: 0.72rem; color: #5a5040; letter-spacing: 0.12em; margin-bottom: 6px; }
+  .extra-row { display: flex; gap: 10px; padding: 3px 0; font-size: 0.8rem; }
+  .extra-row .extra-key { color: #5a5040; white-space: nowrap; }
+  .extra-row .extra-key::after { content: '：'; }
+  .extra-row .extra-val { color: #908878; }
+
+  @media (max-width: 560px) {
+    .cards-container { grid-template-columns: 1fr; }
+    .card-header { padding: 14px 14px 0; gap: 10px; }
+    .card-body { padding: 12px 14px 16px; }
+    .task-name { font-size: 1.1rem; }
+    .info-grid { gap: 6px 10px; }
+    .reward-split { flex-direction: column; gap: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>✦ 命 运 任 务 板 ✦</h1>
+  <p class="subtitle">Destiny Quest Board</p>
+</div>
+
+<div class="cards-container" id="cards-container">
+
+  <!-- ═══════════════════════════════════════════════════
+       任务数据直接写在页面中 —— 即用户的真实场景
+       · 任务1：标准字段
+       · 任务2：多了「限制」「推荐装备」
+       · 任务3：多了「地点」「推荐等级」
+       打开页面瞬间 JS 将其替换为美化卡片
+  ═══════════════════════════════════════════════════ -->
+
+  <task_info>
+任务: [剿灭黑森林哥布林巢穴] (团队)
+委托: 艾莉亚
+等级: [A]
+详情: [近日哥布林在城外黑森林频繁出没，袭击过往商旅，已造成十余人伤亡。冒险者公会决定彻底清剿其巢穴，以绝后患。据侦察兵回报，巢穴深处疑似有哥布林萨满存在。][接取消耗: 500FP ~ 2000FP，视冒险者实力等级与携带装备动态调整，最低不低于500FP]
+目标: [前往城外黑森林深处，找到并摧毁哥布林巢穴，务必消灭哥布林首领「断牙」及其萨满]；[公会纪年 第七纪元·霜月·第十五日 前]
+奖励: [金币×5000，稀有品质武器箱×1（可选），冒险者公会声望+200，限定称号「哥布林屠夫」，FP×2000]；团队需标明(总奖励估值: 约12000FP | 你的份额: 3500FP + 稀有武器优先选择权)；领取方式:[冒险者公会二楼·任务窗口：接待员莉莎]
+  </task_info>
+
+  <task_info>
+任务: [寻找失踪的药师学徒] (个人)
+委托: 艾莉亚
+等级: [C]
+详情: [老药师马库斯的学徒莉娜三日前前往迷雾沼泽采集药材，至今未归。马库斯年事已高无法亲自寻找，恳请冒险者代为搜寻。][接取消耗: 100FP ~ 300FP，视搜索范围与是否遭遇沼泽生物而定]
+目标: [前往迷雾沼泽区域，搜寻失踪学徒莉娜的下落]；[公会纪年 第七纪元·霜月·第二十日 前]
+限制: [仅限单人执行，不可组队]
+推荐装备: [解毒药剂×3，绳索×1，信号弹×2]
+奖励: [金币×800，老药师特制高级回复药水×5，FP×200]；团队需标明(总奖励估值: 约1500FP | 你的份额: 1500FP（个人任务全额）)；领取方式:[冒险者公会一楼·常规窗口：自动结算]
+  </task_info>
+
+  <task_info>
+任务: [龙脊山脉·远古遗迹调查] (团队)
+委托: 艾莉亚
+等级: [S]
+地点: [龙脊山脉·第十二区·远古遗迹入口]
+详情: [王立考古学会在龙脊山脉深处发现了一座未知文明的遗迹，初步探测显示内部存在高强度魔力反应与古代守护机关。学会已有一支先遣队失联超过七日。此任务极度危险，建议至少三名A级以上冒险者组队。][接取消耗: 3000FP ~ 5000FP，涉及远古魔法机关与未知生物，消耗将根据实际遭遇动态追加]
+目标: [深入龙脊山脉远古遗迹，调查遗迹真相，营救先遣队幸存者（如有），带回古代遗物样本]；[公会纪年 第七纪元·霜月·第三十日 前]
+推荐等级: [A级以上冒险者×3，建议包含一名治疗职业]
+奖励: [金币×50000，传说品质遗物×1（考古学会鉴定后交付），王立考古学会声望+1000，冒险者公会声望+500，限定称号「遗迹探索者」，FP×10000，后续遗迹相关任务优先权]；团队需标明(总奖励估值: 约80000FP | 你的份额: 20000FP + 传说遗物优先选择权 + 后续优先权)；领取方式:[冒险者公会三楼·高级委托窗口：副会长维伦]
+  </task_info>
+
+</div>
+
+<script>
+(function() {
+  // ═══════════════════════════════════════════════════════
+  //  唯一正则：捕获 <task_info>…</task_info> 全文
+  //  只做块级提取 —— 字段解析完全由前端 JS 负责
+  //  这样新增/删除/调序任何字段都不会影响正则
+  // ═══════════════════════════════════════════════════════
+  const TASK_REGEX = /<task_info>([\s\S]*?)<\/task_info>/g;
+
+  // ── 步骤 1：扫描页面 DOM 中的 <task_info> 元素 ──
+  const taskEls = document.querySelectorAll('task_info');
+  const blocks = [];
+  taskEls.forEach(el => {
+    // innerHTML 保留 <user> 等尖括号文本（不被浏览器吃掉）
+    const raw = el.innerHTML.trim();
+    if (raw) blocks.push(raw);
+  });
+
+  // ═══════════════════════════════════════════════════════
+  //  前端解析器 —— 灵活处理任意字段组合
+  //
+  //  特殊处理（有独立卡片区域）：
+  //    任务 / 委托 / 等级 / 详情 / 目标 / 奖励
+  //
+  //  冗余处理（归入 extra，统一展示）：
+  //    地点 / 日期 / 限制 / 推荐等级 / 推荐装备 / ……
+  //    任何未识别的「关键词: 内容」行都归入此处
+  //
+  //  字段缺失 → 对应区域自动留空或隐藏，不会报错
+  // ═══════════════════════════════════════════════════════
+  function parseTask(raw) {
+    const lines = raw.split(/\r?\n/);
+    const f = { extra: [] };
+
+    for (const line of lines) {
+      const s = line.trim();
+      if (!s) continue;
+
+      // 匹配行首关键词
+      const m = s.match(/^(\S+?)[：:]\s*([\s\S]*)$/);
+      if (!m) continue;
+
+      const key = m[1];
+      const val = m[2];
+
+      switch (key) {
+
+        // ── 任务：解析 名称 + (类型) ──
+        case '任务': {
+          const nm = val.match(/\[?([^\]]+?)\]?\s*[（(]\s*([^)）]+?)\s*[)）]/);
+          if (nm) { f.taskName = nm[1].trim(); f.taskType = nm[2].trim(); }
+          else    { f.taskName = val.replace(/[\[\]]/g, '').trim(); f.taskType = ''; }
+          break;
+        }
+
+        // ── 委托 ──
+        case '委托':
+          f.commissioner = val.replace(/[\[\]]/g, '').trim();
+          break;
+
+        // ── 等级 ──
+        case '等级':
+          f.rank = val.replace(/[\[\]]/g, '').trim();
+          break;
+
+        // ── 详情：顺序提取 […] 块（背景 + 消耗） ──
+        case '详情': {
+          const brackets = [];
+          let rest = val;
+          const bre = /^\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\s*/;
+          let bm;
+          while ((bm = rest.match(bre))) {
+            brackets.push(bm[1]);
+            rest = rest.slice(bm[0].length);
+          }
+          f.background = brackets[0] || '';
+          f.cost       = brackets[1] || rest.trim();
+          break;
+        }
+
+        // ── 目标：按 ；/; 拆分为 目标 + 截止 ──
+        case '目标': {
+          const parts = val.split(/[；;]/);
+          f.objective = (parts[0] || '').replace(/^\[|\]$/g, '').trim();
+          f.deadline  = (parts[1] || '').replace(/^\[|\]$/g, '').trim();
+          break;
+        }
+
+        // ── 奖励：复杂结构（奖励内容 + 总额/份额 + 领取方式） ──
+        case '奖励': {
+          const rbm = val.match(/^\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\s*/);
+          f.reward = rbm ? rbm[1] : '';
+          const after = val.slice(rbm ? rbm[0].length : 0);
+
+          const tm = after.match(/团队需标明[（(]\s*([^|]+?)\s*\|\s*([^)）]+?)\s*[)）]/);
+          if (tm) { f.totalReward = tm[1].trim(); f.userShare = tm[2].trim(); }
+
+          const cm = after.match(/领取方式[：:]\s*\[([^\]]+)\]/);
+          f.claimInfo = cm ? cm[1].trim() : '';
+          break;
+        }
+
+        // ── 其他任意词条 → 冗余归入 extra ──
+        default:
+          f.extra.push({
+            key:   key,
+            value: val.replace(/[\[\]]/g, '').trim()
+          });
+      }
+    }
+    return f;
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  卡片渲染
+  // ═══════════════════════════════════════════════════════
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  function buildCard(f) {
+    const p = [];
+
+    p.push('<div class="task-card">');
+    p.push('<div class="card-ornament"></div>');
+
+    // ── Header ──
+    p.push('<div class="card-header">');
+    p.push(`<div class="rank-badge" data-rank="${esc(f.rank || '?')}">${esc(f.rank || '?')}</div>`);
+    p.push('<div class="task-title-group">');
+    p.push(`<div class="task-name">${esc(f.taskName || '未知任务')}</div>`);
+    if (f.taskType) p.push(`<span class="task-type-tag" data-type="${esc(f.taskType)}">${esc(f.taskType)}任务</span>`);
+    p.push('</div></div>');
+
+    // ── Body ──
+    p.push('<div class="card-body">');
+
+    // 委托 + 消耗
+    p.push('<div class="info-grid">');
+    p.push('<span class="info-label">委托</span>');
+    p.push(`<span class="info-value"><span class="commissioner-mark">◆</span>${esc(f.commissioner || '—')}</span>`);
+    p.push('<span class="info-label">消耗</span>');
+    p.push(`<span class="info-value cost">${esc(f.cost || '—')}</span>`);
+    p.push('</div>');
+
+    // 背景
+    if (f.background) p.push(`<div class="detail-block">${esc(f.background)}</div>`);
+
+    // 目标 + 截止
+    p.push('<div class="info-grid" style="margin-top:8px;">');
+    p.push('<span class="info-label">目标</span>');
+    p.push(`<span class="info-value">${esc(f.objective || '—')}</span>`);
+    p.push('<span class="info-label">截止</span>');
+    p.push(`<span class="info-value deadline">&#x23F0; ${esc(f.deadline || '—')}</span>`);
+    p.push('</div>');
+
+    // ── 奖励区块 ──
+    if (f.reward || f.totalReward || f.userShare) {
+      p.push('<div class="reward-section">');
+      p.push('<div class="section-title">&#x1F381; 任务报酬</div>');
+      if (f.reward) p.push(`<div class="reward-content">${esc(f.reward)}</div>`);
+      if (f.totalReward || f.userShare) {
+        p.push('<div class="reward-split">');
+        p.push(`<div class="reward-split-item"><span class="split-label">&#x1F4CA; 总奖励估值</span><span class="split-value">${esc(f.totalReward || '—')}</span></div>`);
+        p.push(`<div class="reward-split-item"><span class="split-label">&#x1F4B0; 你的份额</span><span class="split-value">${esc(f.userShare || '—')}</span></div>`);
+        p.push('</div>');
+      }
+      p.push('</div>');
+    }
+
+    // 领取
+    if (f.claimInfo) {
+      p.push('<div class="claim-block">');
+      p.push('<span class="claim-icon">&#x1F4CD;</span>');
+      p.push(`<span class="claim-text">${esc(f.claimInfo)}</span>`);
+      p.push('</div>');
+    }
+
+    // ── 冗余字段（地点/日期/限制/推荐等级/推荐装备/……） ──
+    if (f.extra && f.extra.length > 0) {
+      p.push('<div class="extra-fields">');
+      p.push('<div class="extra-title">&#x1F4CB; 补充信息</div>');
+      for (const ex of f.extra) {
+        p.push(`<div class="extra-row"><span class="extra-key">${esc(ex.key)}</span><span class="extra-val">${esc(ex.value)}</span></div>`);
+      }
+      p.push('</div>');
+    }
+
+    p.push('</div></div>'); // card-body, task-card
+    return p.join('');
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  步骤 2：逐个解析 → 渲染卡片 → 插入页面
+  // ═══════════════════════════════════════════════════════
+  const container = document.getElementById('cards-container');
+  const cardsHTML = blocks
+    .map(parseTask)
+    .filter(f => f.taskName)
+    .map(buildCard);
+
+  container.innerHTML = cardsHTML.length > 0
+    ? cardsHTML.join('')
+    : '<p style="text-align:center;color:#6b5e4a;padding:40px;">未找到任务数据</p>';
+})();
+</script>
+
+</body>
+</html>
